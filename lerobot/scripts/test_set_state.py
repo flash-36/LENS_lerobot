@@ -87,7 +87,7 @@ env = gym.make(
 observation, info = env.reset(seed=42)
 
 Frames = [] 
-for t in range(300):
+for t in range(200):
     # print("observation",observation)
     observation = preprocess_observation(observation)
     # observation = {key: observation[key].to(device, non_blocking=True) for key in observation}
@@ -112,7 +112,7 @@ new_env = gym.make(
 new_env.reset(seed=42)
 new_env.set_state(env_pose,env_bx,nev_vel)
 
-for t in range(300,600):
+for t in range(200,600):
     observation = preprocess_observation(observation)
     with torch.inference_mode():
             action = policy.select_action(observation)
