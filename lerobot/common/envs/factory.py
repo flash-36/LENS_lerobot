@@ -51,6 +51,7 @@ def make_env(cfg: EnvConfig, n_envs: int = 1, use_async_envs: bool = False) -> g
         raise ValueError("`n_envs must be at least 1")
 
     package_name = f"gym_{cfg.type}"
+    print("**** Packeage name inside facoty.py",package_name)
 
     try:
         importlib.import_module(package_name)

@@ -428,14 +428,11 @@ class ManipulatorRobot:
             self.follower_arms[name].write("Maximum_Acceleration", 254)
             self.follower_arms[name].write("Acceleration", 254)
 
-    def teleop_step(
-        self, record_data=False
-    ) -> None | tuple[dict[str, torch.Tensor], dict[str, torch.Tensor]]:
+    def teleop_step(self, record_data=False) -> None | tuple[dict[str, torch.Tensor], dict[str, torch.Tensor]]:
         if not self.is_connected:
             raise RobotDeviceNotConnectedError(
                 "ManipulatorRobot is not connected. You need to run `robot.connect()`."
             )
-
         # Prepare to assign the position of the leader to the follower
         leader_pos = {}
         for name in self.leader_arms:
@@ -443,7 +440,6 @@ class ManipulatorRobot:
             leader_pos[name] = self.leader_arms[name].read("Present_Position")
             leader_pos[name] = torch.from_numpy(leader_pos[name])
             self.logs[f"read_leader_{name}_pos_dt_s"] = time.perf_counter() - before_lread_t
-
         # Send goal position to the follower
         follower_goal_pos = {}
         for name in self.follower_arms:
@@ -499,14 +495,12 @@ class ManipulatorRobot:
             images[name] = torch.from_numpy(images[name])
             self.logs[f"read_camera_{name}_dt_s"] = self.cameras[name].logs["delta_timestamp_s"]
             self.logs[f"async_read_camera_{name}_dt_s"] = time.perf_counter() - before_camread_t
-
         # Populate output dictionnaries
         obs_dict, action_dict = {}, {}
         obs_dict["observation.state"] = state
         action_dict["action"] = action
         for name in self.cameras:
             obs_dict[f"observation.images.{name}"] = images[name]
-
         return obs_dict, action_dict
 
     def capture_observation(self):

@@ -40,6 +40,14 @@ python lerobot/scripts/eval.py \
     --use_amp=false \
     --device=cuda
 ```
+python lerobot/scripts/eval.py \
+    --policy.path=outputs/train/19-02-39_aloha_act/checkpoints/100000/pretrained_model \
+    --env.type=aloha \
+    --eval.batch_size=1 \
+    --eval.n_episodes=1 \
+    --use_amp=false \
+    --device=cuda
+```
 
 Note that in both examples, the repo/folder should contain at least `config.json` and `model.safetensors` files.
 
@@ -79,7 +87,8 @@ from lerobot.common.utils.utils import (
 )
 from lerobot.configs import parser
 from lerobot.configs.eval import EvalPipelineConfig
-
+import os
+os.environ["MUJOCO_GL"] = "egl"
 
 def rollout(
     env: gym.vector.VectorEnv,
@@ -127,8 +136,11 @@ def rollout(
 
     if hasattr(policy, "use_ema_modules"):
         policy.use_ema_modules()
-
+    seeds = 42
     observation, info = env.reset(seed=seeds)
+    print("Observation after reseting environment in eval.py",observation)
+    # print("envs",dir(env.reset))
+    # print("Hello",env.spec)
     if render_callback is not None:
         render_callback(env)
 
@@ -153,6 +165,7 @@ def rollout(
         observation = preprocess_observation(observation)
         if return_observations:
             all_observations.append(deepcopy(observation))
+        print("Observation after reseting environment in eval.py",observation)
 
         observation = {key: observation[key].to(device, non_blocking=True) for key in observation}
 
@@ -292,6 +305,7 @@ def eval_policy(
             seeds = range(
                 start_seed + (batch_ix * env.num_envs), start_seed + ((batch_ix + 1) * env.num_envs)
             )
+       
         rollout_data = rollout(
             env,
             policy,

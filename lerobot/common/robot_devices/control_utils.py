@@ -236,7 +236,11 @@ def control_loop(
         start_loop_t = time.perf_counter()
 
         if teleoperate:
+            # print("Hello")
             observation, action = robot.teleop_step(record_data=True)
+            # print("Laptop",observation["observation.images.laptop"].shape)
+            # print("Phone",observation["observation.images.laptop"].shape)
+
         else:
             observation = robot.capture_observation()
 
@@ -253,12 +257,15 @@ def control_loop(
 
         if display_cameras and not is_headless():
             image_keys = [key for key in observation if "image" in key]
+            print("display camera before loop")
             for key in image_keys:
                 cv2.imshow(key, cv2.cvtColor(observation[key].numpy(), cv2.COLOR_RGB2BGR))
+                print("After imshow")
             cv2.waitKey(1)
 
         if fps is not None:
             dt_s = time.perf_counter() - start_loop_t
+            # print("inside waite loop",start_loop_t,dt_s)
             busy_wait(1 / fps - dt_s)
 
         dt_s = time.perf_counter() - start_loop_t

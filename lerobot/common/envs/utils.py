@@ -44,7 +44,9 @@ def preprocess_observation(observations: dict[str, np.ndarray]) -> dict[str, Ten
             img = torch.from_numpy(img)
 
             # sanity check that images are channel last
+            print(img.shape)
             _, h, w, c = img.shape
+
             assert c < h and c < w, f"expect channel last images, but instead got {img.shape=}"
 
             # sanity check that images are uint8
