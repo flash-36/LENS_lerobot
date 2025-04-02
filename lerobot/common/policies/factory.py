@@ -23,6 +23,7 @@ from lerobot.common.datasets.utils import dataset_to_policy_features
 from lerobot.common.envs.configs import EnvConfig
 from lerobot.common.envs.utils import env_to_policy_features
 from lerobot.common.policies.act.configuration_act import ACTConfig
+from lerobot.common.policies.calql.configuration_calql import CalQLConfig
 from lerobot.common.policies.diffusion.configuration_diffusion import DiffusionConfig
 from lerobot.common.policies.pi0.configuration_pi0 import PI0Config
 from lerobot.common.policies.pretrained import PreTrainedPolicy
@@ -54,6 +55,10 @@ def get_policy_class(name: str) -> PreTrainedPolicy:
         from lerobot.common.policies.pi0.modeling_pi0 import PI0Policy
 
         return PI0Policy
+    elif name == "calql":
+        from lerobot.common.policies.calql.modeling_calql import CalQLPolicy
+
+        return CalQLPolicy
     else:
         raise NotImplementedError(f"Policy with name {name} is not implemented.")
 
@@ -69,6 +74,8 @@ def make_policy_config(policy_type: str, **kwargs) -> PreTrainedConfig:
         return VQBeTConfig(**kwargs)
     elif policy_type == "pi0":
         return PI0Config(**kwargs)
+    elif policy_type == "calql":
+        return CalQLConfig(**kwargs)
     else:
         raise ValueError(f"Policy type '{policy_type}' is not available.")
 
@@ -99,7 +106,9 @@ def make_policy(
         PreTrainedPolicy: _description_
     """
     if bool(ds_meta) == bool(env_cfg):
-        raise ValueError("Either one of a dataset metadata or a sim env must be provided.")
+        raise ValueError(
+            "Either one of a dataset metadata or a sim env must be provided."
+        )
 
     # NOTE: Currently, if you try to run vqbet with mps backend, you'll get this error.
     # TODO(aliberts, rcadene): Implement a check_backend_compatibility in policies?
@@ -129,8 +138,12 @@ def make_policy(
             )
         features = env_to_policy_features(env_cfg)
 
-    cfg.output_features = {key: ft for key, ft in features.items() if ft.type is FeatureType.ACTION}
-    cfg.input_features = {key: ft for key, ft in features.items() if key not in cfg.output_features}
+    cfg.output_features = {
+        key: ft for key, ft in features.items() if ft.type is FeatureType.ACTION
+    }
+    cfg.input_features = {
+        key: ft for key, ft in features.items() if key not in cfg.output_features
+    }
     kwargs["config"] = cfg
 
     if cfg.pretrained_path:

@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # Copyright 2024 The HuggingFace Inc. team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,9 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .act.configuration_act import ACTConfig as ACTConfig
-from .calql.configuration_calql import CalQLConfig as CalQLConfig
-from .diffusion.configuration_diffusion import DiffusionConfig as DiffusionConfig
-from .pi0.configuration_pi0 import PI0Config as PI0Config
-from .tdmpc.configuration_tdmpc import TDMPCConfig as TDMPCConfig
-from .vqbet.configuration_vqbet import VQBeTConfig as VQBeTConfig
+from lerobot.common.policies.calql.configuration_calql import CalQLConfig
+from lerobot.common.policies.calql.modeling_calql import CalQLPolicy
+
+__all__ = ["CalQLConfig", "CalQLPolicy"]
