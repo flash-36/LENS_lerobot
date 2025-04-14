@@ -119,11 +119,17 @@ def init_logging():
     for handler in logging.root.handlers[:]:
         logging.root.removeHandler(handler)
 
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)  # Make sure this matches the desired logging level
+
+    # Set formatter
     formatter = logging.Formatter()
     formatter.format = custom_format
-    console_handler = logging.StreamHandler()
     console_handler.setFormatter(formatter)
+
+    # Add the handler to the root logger
     logging.getLogger().addHandler(console_handler)
+    logging.getLogger().setLevel(logging.INFO)  # Also set root logger level
 
 
 def format_big_number(num, precision=0):

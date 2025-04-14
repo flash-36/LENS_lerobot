@@ -44,6 +44,8 @@ from lerobot.common.policies.utils import (
     populate_queues,
 )
 
+import copy
+
 
 class DiffusionPolicy(PreTrainedPolicy):
     """
@@ -98,6 +100,47 @@ class DiffusionPolicy(PreTrainedPolicy):
             self._queues["observation.images"] = deque(maxlen=self.config.n_obs_steps)
         if self.config.env_state_feature:
             self._queues["observation.environment_state"] = deque(maxlen=self.config.n_obs_steps)
+    
+    #=======================================================================================================
+    def select_actions(self, batch: dict[str, Tensor], n, calql) -> Tensor:
+        obs = copy.deepcopy(batch)
+        batch = self.normalize_inputs(batch)
+        if self.config.image_features:
+            batch = dict(batch)  # shallow copy so that adding a key doesn't modify the original
+            batch["observation.images"] = torch.stack(
+                [batch[key] for key in self.config.image_features], dim=-4
+            )        
+        
+        n_actions = []
+        self._queues = populate_queues(self._queues, batch)
+        if len(self._queues["action"]) == 0:
+            for i in range (n):
+
+                temp = deque()
+                queues = copy.deepcopy(self._queues)
+                # stack n latest observations from the queue
+                temp_batch = {k: torch.stack(list(queues[k]), dim=1) for k in batch if k in queues}
+                actions = self.diffusion.generate_actions(temp_batch)
+                
+                
+
+                # TODO(rcadene): make above methods return output dictionary?
+                actions = self.unnormalize_outputs({"action": actions})["action"]
+                
+                temp.extend(actions.transpose(0, 1))
+                n_actions.append(temp)
+
+            action_val = np.zeros(n)
+            for i in range (n):
+                with torch.inference_mode():
+                    action_val[i] = calql.q_net(obs, n_actions[i][0])
+
+            max_index = np.argmax(action_val)
+            self._queues["action"].extend(n_actions[max_index])
+        action = self._queues["action"].popleft()
+        return action
+
+    #===========================================================================================================
 
     @torch.no_grad
     def select_action(self, batch: dict[str, Tensor]) -> Tensor:
@@ -139,7 +182,7 @@ class DiffusionPolicy(PreTrainedPolicy):
             actions = self.unnormalize_outputs({"action": actions})["action"]
 
             self._queues["action"].extend(actions.transpose(0, 1))
-
+        # print(len(self._queues["action"]))
         action = self._queues["action"].popleft()
         return action
 
