@@ -183,7 +183,7 @@ def train(cfg: TrainPipelineConfig):
         dataset,
         num_workers=cfg.num_workers,
         batch_size=cfg.batch_size,
-        shuffle=False,
+        shuffle=True,
         sampler=sampler,
         pin_memory=device.type != "cpu",
         drop_last=False,
