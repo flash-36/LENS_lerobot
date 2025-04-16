@@ -228,11 +228,11 @@ while True:
         #     events["exit_early"] = False
         #     dataset.clear_episode_buffer()
         #     continue
-
-        dataset.save_episode(task=task)
-        video_path = root/ f"rollout_episode_{recorded_episodes}.mp4"
-        imageio.mimsave(str(video_path), np.stack(Frames), fps=fps)
-        recorded_episodes += 1
+        if success:
+            dataset.save_episode(task=task)
+            video_path = root/ f"rollout_episode_{recorded_episodes}.mp4"
+            imageio.mimsave(str(video_path), np.stack(Frames), fps=fps)
+            recorded_episodes += 1
         Frames = [] 
         if recorded_episodes >= n_episodes:
             break
