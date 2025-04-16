@@ -94,7 +94,7 @@ from lerobot.common.robot_devices.robots.utils import Robot, make_robot
 from lerobot.common.robot_devices.utils import busy_wait
 from lerobot.common.utils.utils import init_hydra_config, init_logging, log_say
 
-raise NotImplementedError("This script is currently deactivated")
+# raise NotImplementedError("This script is currently deactivated")
 
 DEFAULT_FEATURES = {
     "next.reward": {
@@ -208,7 +208,7 @@ def record(
 
     # get image keys
     image_keys = [key for key in env.observation_space if "image" in key]
-    state_keys_dict = env_cfg.state_keys
+    state_keys_dict = env.unwrapped.state_keys
 
     if resume:
         dataset = LeRobotDataset(
