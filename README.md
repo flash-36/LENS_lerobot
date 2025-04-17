@@ -378,5 +378,7 @@ Additionally, if you are using any of the particular policy architecture, pretra
 
 ## Install gym simulation for Koch arm
 To install simulation for Koch arm:
+```bash
 pip install git+ssh://git@github.com/michel-aractingi/gym-lowcostrobot.git@environment_fixes
+```
 This will be saved into /miniconda3/envs/lerobot/lib/python3.10/site-packages/gym_lowcostrobot
