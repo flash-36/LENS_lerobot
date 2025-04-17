@@ -375,3 +375,8 @@ Additionally, if you are using any of the particular policy architecture, pretra
   year={2024}
 }
 ```
+
+## Install gym simulation for Koch arm
+To install simulation for Koch arm:
+pip install git+ssh://git@github.com/michel-aractingi/gym-lowcostrobot.git@environment_fixes
+This will be saved into /miniconda3/envs/lerobot/lib/python3.10/site-packages/gym_lowcostrobot
