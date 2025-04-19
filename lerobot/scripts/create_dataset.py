@@ -25,6 +25,27 @@ device = "cuda"
 
 task = "AlohaInsertion-v0"
 DEFAULT_FEATURES = {
+
+    "observation.state": {
+            "dtype": "float32",
+            "shape": (14,),
+            "names": [
+                    "left_waist",
+                    "left_shoulder",
+                    "left_elbow",
+                    "left_forearm_roll",
+                    "left_wrist_angle",
+                    "left_wrist_rotate",
+                    "left_gripper",
+                    "right_waist",
+                    "right_shoulder",
+                    "right_elbow",
+                    "right_forearm_roll",
+                    "right_wrist_angle",
+                    "right_wrist_rotate",
+                    "right_gripper"
+                ]
+    },
     "next.reward": {
         "dtype": "float32",
         "shape": (1,),
@@ -96,9 +117,11 @@ def preprocess_observation(observations: dict[str, np.ndarray]) -> dict[str, Ten
 
 
 
-n_episodes = 2
+n_episodes = 50
 # Create a directory to store videos and evaluation info
-root = Path("outputs/record/test_dataset_1")
+root_s = Path("outputs/record/gym_aloha_dummy_dataset_success")
+root_f = Path("outputs/record/gym_aloha_dummy_dataset_failure")
+
 # root.mkdir(parents=True, exist_ok=True)
 
 device = "cuda"
@@ -120,38 +143,48 @@ num_image_writer_processes= 0
 num_image_writer_threads_per_camera= 4
 
 
-image_keys = [key for key in env.observation_space if "image" in key]
-obs_key = [key for key in env.observation_space if "agent_pos" in key]
-print("obs_key",obs_key)
+image_keys = [key for key in env.observation_space if "pixels" in key]
+# obs_key = [key for key in env.observation_space if "agent_pos" in key]
+
 # state_keys_dict = env.state_keys
 features = DEFAULT_FEATURES
 
 fps = env.metadata["render_fps"]
-video_path = root / "test1.mp4"
+# video_path = root_s / "test1.mp4"
 repo_id = "lerobot/aloha_test_dataset"
-# add image keys to features
+# add image keys to features !!
 for key in image_keys:
             shape = env.observation_space[key].shape
             if not key.startswith("observation.image."):
-                key = "observation.image." + key
+                key = "observation.images.top"
             features[key] = {"dtype": "video", "names": ["channels", "height", "width"], "shape": shape}
+            print(key)
 
-for key in obs_key:
-            shape = env.observation_space[key].shape
-            if not key.startswith("observation.state."):
-                 key = "observation.state."+ key        
-            features[key] = {
-                "dtype": "float32",
-                "names": None,
-                "shape": shape,
-            }
+# for key in obs_key:
+#             shape = env.observation_space[key].shape
+#             if not key.startswith("observation.state."):
+#                  key = "observation.state."+ key        
+#             features[key] = {
+#                 "dtype": "float32",
+#                 "names": None,
+#                 "shape": shape,
+#             }
 
 features["action"] = {"dtype": "float32", "shape": env.action_space.shape, "names": None}
 
-dataset = LeRobotDataset.create(
+dataset_success = LeRobotDataset.create(
             repo_id,
             fps,
-            root=root,
+            root=root_s,
+            features=features,
+            use_videos=True,
+            image_writer_processes=num_image_writer_processes,
+            image_writer_threads=num_image_writer_threads_per_camera * num_cameras,
+)
+dataset_failure = LeRobotDataset.create(
+            repo_id,
+            fps,
+            root=root_f,
             features=features,
             use_videos=True,
             image_writer_processes=num_image_writer_processes,
@@ -182,6 +215,12 @@ while True:
             observation = preprocess_observation(observation)
             # observation = {key: observation[key].to(device, non_blocking=True) for key in observation}
             # print("observation",observation)
+            # observation_key = [key for key in observation]
+            # print("obs_key after preprocess observation",observation_key)
+            # print("imae shape",observation["observation.images.top"].shape,observation["observation.images.top"].type)
+            # print("state shape",observation["observation.state"].shape,observation["observation.state"].type)
+
+
 
             with torch.inference_mode():
                 action = policy.select_action(observation)
@@ -193,9 +232,10 @@ while True:
 
 
             success = info.get("is_success", False)
-            env_timestamp = info.get("timestamp", dataset.episode_buffer["size"] / fps)
+            env_timestamp = info.get("timestamp", dataset_success.episode_buffer["size"] / fps)
             # print("action", torch.from_numpy(numpy_action))
             frame = {
+                "observation.state" : torch.from_numpy(observation["agent_pos"]),
                 "action": torch.from_numpy(numpy_action),
                 "next.reward": reward,
                 "next.success": success,
@@ -203,19 +243,22 @@ while True:
                 "timestamp": env_timestamp,
             }
 
-            for key in image_keys:
-                if not key.startswith("observation.image"):
-                    frame["observation.image." + key] = observation[key]
-                else:
-                    frame[key] = observation[key]
+            if "pixels" in observation:
+                if isinstance(observation["pixels"], dict):
+                    for key, img in observation["pixels"].items():
+                        frame[f"observation.images.{key}"] = img 
+                        # {f"observation.images.{key}": img for key, img in observation["pixels"].items()}
+                # else:
+                #     frame = {"observation.image": observation["pixels"]}
+                # print("key:",key, frame)
 
-            for key in obs_key:
-                if not key.startswith("observation.image"):
-                    frame["observation.state."+ key] = torch.from_numpy(observation[key])
-                else:
-                    frame[key] = torch.from_numpy(observation[key])
 
-            dataset.add_frame(frame)
+            # for key in obs_key:
+            #     if not key.startswith("observation.state"):
+            #         frame["observation.state."+ key] = torch.from_numpy(observation[key])
+            #     else:
+            #         frame[key] = torch.from_numpy(observation[key])
+
 
 
             timestamp = time.perf_counter() - start_episode_t
@@ -229,10 +272,12 @@ while True:
         #     dataset.clear_episode_buffer()
         #     continue
         if success:
-            dataset.save_episode(task=task)
-            video_path = root/ f"rollout_episode_{recorded_episodes}.mp4"
-            imageio.mimsave(str(video_path), np.stack(Frames), fps=fps)
+            dataset_success.add_frame(frame)
+            dataset_success.save_episode(task=task)
             recorded_episodes += 1
+        else:
+            dataset_failure.add_frame(frame)
+            dataset_failure.save_episode(task=task)         
         Frames = [] 
         if recorded_episodes >= n_episodes:
             break
@@ -240,8 +285,8 @@ while True:
             logging.info("Waiting for a few seconds before starting next episode recording...")
 
 run_compute_stats = True
-dataset.consolidate(run_compute_stats)
-
+dataset_success.consolidate(run_compute_stats)
+dataset_failure.consolidate(run_compute_stats)
 
 
 
