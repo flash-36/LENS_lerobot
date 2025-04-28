@@ -8,6 +8,7 @@ import numpy as np
 import torch
 from torch import Tensor, nn
 import einops
+import copy
 
 from lerobot.common.envs.factory import make_env
 from lerobot.configs.eval import EvalPipelineConfig
@@ -119,8 +120,9 @@ def preprocess_observation(observations: dict[str, np.ndarray]) -> dict[str, Ten
 
 n_episodes = 50
 # Create a directory to store videos and evaluation info
-root_s = Path("outputs/record/gym_aloha_dummy_dataset_success")
-root_f = Path("outputs/record/gym_aloha_dummy_dataset_failure")
+root_s = Path("outputs/record/gym_aloha_dummy_success_dataset")
+root_f = Path("outputs/record/gym_aloha_dummy_failure_dataset")
+# root = Path("outputs/record/gym_aloha_dummy_dataset_all")
 
 # root.mkdir(parents=True, exist_ok=True)
 
@@ -151,7 +153,7 @@ features = DEFAULT_FEATURES
 
 fps = env.metadata["render_fps"]
 # video_path = root_s / "test1.mp4"
-repo_id = "lerobot/aloha_test_dataset"
+repo_id = "lerobot/aloha_test_dataset_dummy"
 # add image keys to features !!
 for key in image_keys:
             shape = env.observation_space[key].shape
@@ -190,10 +192,18 @@ dataset_failure = LeRobotDataset.create(
             image_writer_processes=num_image_writer_processes,
             image_writer_threads=num_image_writer_threads_per_camera * num_cameras,
 )
-
+# dataset = LeRobotDataset.create(
+#             repo_id,
+#             fps,
+#             root=root,
+#             features=features,
+#             use_videos=True,
+#             image_writer_processes=num_image_writer_processes,
+#             image_writer_threads=num_image_writer_threads_per_camera * num_cameras,
+# )
 recorded_episodes = 0
 Frames = [] 
-
+episode_length = 400
 while True:
     
         # if events is None:
@@ -201,15 +211,15 @@ while True:
 
         if episode_time_s is None:
             episode_time_s = float("inf")
-
         timestamp = 0
+        timestep = 0
         start_episode_t = time.perf_counter()
         
         policy.reset()
         seed = np.random.randint(0, 1e5)
         observation, info = env.reset(seed=seed)
         Frames = [] 
-        while timestamp < episode_time_s:
+        while timestep < episode_length:
             start_loop_t = time.perf_counter()
 
             observation = preprocess_observation(observation)
@@ -260,8 +270,13 @@ while True:
             #         frame[key] = torch.from_numpy(observation[key])
 
 
+            dataset_success.add_frame(frame)
+            dataset_failure.add_frame(frame)
 
             timestamp = time.perf_counter() - start_episode_t
+            timestep += 1
+            # print(success)
+
         #     if events["exit_early"] or terminated:
         #         events["exit_early"] = False
         #         break
@@ -271,13 +286,23 @@ while True:
         #     events["exit_early"] = False
         #     dataset.clear_episode_buffer()
         #     continue
+
+        # dataset.save_episode(task=task)
         if success:
-            dataset_success.add_frame(frame)
+            print("Succes, saving ... ")
+            # dataset_success.episode_buffer = copy.deepcopy(dataset.episode_buffer)
+            # print("success: ",dataset_success)
             dataset_success.save_episode(task=task)
             recorded_episodes += 1
         else:
-            dataset_failure.add_frame(frame)
-            dataset_failure.save_episode(task=task)         
+            print("failure ...")
+            # dataset_failure = copy.deepcopy(dataset)
+            # print("failure: ", dataset_failure)
+            dataset_failure.save_episode(task=task)
+        # print("original: ",dataset)
+        # dataset.save_episode(task=task)
+        dataset_success.clear_episode_buffer()
+        dataset_failure.clear_episode_buffer()       
         Frames = [] 
         if recorded_episodes >= n_episodes:
             break
@@ -285,8 +310,8 @@ while True:
             logging.info("Waiting for a few seconds before starting next episode recording...")
 
 run_compute_stats = True
-dataset_success.consolidate(run_compute_stats)
-dataset_failure.consolidate(run_compute_stats)
+# dataset_success.consolidate(run_compute_stats)
+# dataset_failure.consolidate(run_compute_stats)
 
 
 
