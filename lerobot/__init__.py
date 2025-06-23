@@ -164,12 +164,17 @@ available_real_world_datasets = [
 ]
 
 available_datasets = sorted(
-    set(itertools.chain(*available_datasets_per_env.values(), available_real_world_datasets))
+    set(
+        itertools.chain(
+            *available_datasets_per_env.values(), available_real_world_datasets
+        )
+    )
 )
 
 # lists all available policies from `lerobot/common/policies`
 available_policies = [
     "act",
+    "actplus",
     "diffusion",
     "tdmpc",
     "vqbet",
@@ -198,16 +203,20 @@ available_motors = [
 
 # keys and values refer to yaml files
 available_policies_per_env = {
-    "aloha": ["act"],
+    "aloha": ["act", "actplus"],
     "pusht": ["diffusion", "vqbet"],
     "xarm": ["tdmpc"],
     "koch_real": ["act_koch_real"],
     "aloha_real": ["act_aloha_real"],
 }
 
-env_task_pairs = [(env, task) for env, tasks in available_tasks_per_env.items() for task in tasks]
+env_task_pairs = [
+    (env, task) for env, tasks in available_tasks_per_env.items() for task in tasks
+]
 env_dataset_pairs = [
-    (env, dataset) for env, datasets in available_datasets_per_env.items() for dataset in datasets
+    (env, dataset)
+    for env, datasets in available_datasets_per_env.items()
+    for dataset in datasets
 ]
 env_dataset_policy_triplets = [
     (env, dataset, policy)
